@@ -11,7 +11,6 @@ TEST_ACCOUNT_ID = "000000000000"
 TEST_REGION = "us-east-1"
 TEST_UPDATE_TAG = 123456789
 
-# Test topic data matching the expected assertion
 TEST_TOPIC_DATA = [{
     'TopicArn': 'arn:aws:sns:us-east-1:123456789012:test-topic',
     'TopicName': 'test-topic',
@@ -35,11 +34,11 @@ def test_sync_sns(mock_transform, neo4j_session):
     """
     Test that SNS topics are correctly synced to the graph.
     """
-    # Arrange
+    
     boto3_session = MagicMock()
     create_test_account(neo4j_session, TEST_ACCOUNT_ID, TEST_UPDATE_TAG)
 
-    # Act
+    
     sync(
         neo4j_session,
         boto3_session,
@@ -49,17 +48,16 @@ def test_sync_sns(mock_transform, neo4j_session):
         {"UPDATE_TAG": TEST_UPDATE_TAG, "AWS_ID": TEST_ACCOUNT_ID},
     )
 
-    # Assert topic node was created
-    assert check_nodes(neo4j_session, "SNSTopic", ["arn"]) == {  # Changed from AwsSnsTopic
+    
+    assert check_nodes(neo4j_session, "SNSTopic", ["arn"]) == { 
         ("arn:aws:sns:us-east-1:123456789012:test-topic",),
     }
-
-    # Assert relationship between account and topic
+    
     assert check_rels(
         neo4j_session,
         "AWSAccount",
         "id",
-        "SNSTopic",  # Changed from AwsSnsTopic
+        "SNSTopic",  
         "arn", 
         "RESOURCE",
         rel_direction_right=True,
