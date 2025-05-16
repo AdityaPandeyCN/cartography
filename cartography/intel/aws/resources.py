@@ -25,6 +25,7 @@ from . import route53
 from . import s3
 from . import secretsmanager
 from . import securityhub
+from . import sns 
 from . import sqs
 from . import ssm
 from .ec2.auto_scaling_groups import sync_ec2_auto_scaling_groups
@@ -91,6 +92,7 @@ RESOURCE_FUNCTIONS: Dict[str, Callable[..., None]] = {
     "apigateway": apigateway.sync,
     "secretsmanager": secretsmanager.sync,
     "securityhub": securityhub.sync,
+    "sns": sns.sync,
     "sqs": sqs.sync,
     "ssm": ssm.sync,
     "inspector": inspector.sync,
