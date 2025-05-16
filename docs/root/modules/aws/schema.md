@@ -3500,3 +3500,31 @@ Representation of an AWS [EC2 Route](https://docs.aws.amazon.com/AWSEC2/latest/A
     ```
     (EC2Route)-[ROUTES_TO_GATEWAY]->(AWSInternetGateway)
     ```
+
+### SNSTopic
+
+Representation of an AWS [SNS Topic](https://docs.aws.amazon.com/sns/latest/api/API_Topic.html)
+
+| Field | Description |
+|-------|-------------|
+| firstseen| Timestamp of when a sync job first discovered this node |
+| lastupdated | Timestamp of the last time the node was updated |
+| **id** | The ARN of the SNS topic |
+| **arn** | The Amazon Resource Name (ARN) of the topic |
+| name | The name of the topic |
+| displayname | The display name of the topic |
+| owner | The AWS account ID of the topic's owner |
+| subscriptionspending | The number of subscriptions pending confirmation |
+| subscriptionsconfirmed | The number of confirmed subscriptions |
+| subscriptionsdeleted | The number of deleted subscriptions |
+| deliverypolicy | The JSON serialization of the topic's delivery policy |
+| effectivedeliverypolicy | The JSON serialization of the effective delivery policy |
+| kmsmasterkeyid | The ID of an AWS managed customer master key (CMK) for Amazon SNS or a custom CMK |
+| region | The AWS region where the topic is located |
+
+#### Relationships
+
+- SNS Topics are a resource under the AWS Account.
+    ```
+    (AWSAccount)-[RESOURCE]->(SNSTopic)
+    ```
