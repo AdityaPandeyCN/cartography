@@ -204,13 +204,15 @@ def test_s3_sns_relationship(neo4j_session):
         TEST_UPDATE_TAG,
     )
     
-    # Act - Load notifications
-    cartography.intel.aws.s3.load_s3_details(
-        neo4j_session,
-        boto3_session,
-        tests.data.aws.s3.LIST_BUCKETS,
+    # Act - Parse and load notifications directly
+    parsed_notifications = cartography.intel.aws.s3.parse_notification_configuration(
+        "bucket-1",
         tests.data.aws.s3.S3_NOTIFICATIONS,
-        TEST_ACCOUNT_ID,
+    )
+    
+    cartography.intel.aws.s3._load_s3_notifications(
+        neo4j_session,
+        parsed_notifications,
         TEST_UPDATE_TAG,
     )
     

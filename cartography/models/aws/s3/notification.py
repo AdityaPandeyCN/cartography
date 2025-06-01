@@ -6,7 +6,6 @@ from cartography.models.core.relationships import CartographyRelSchema
 from cartography.models.core.relationships import LinkDirection
 from cartography.models.core.relationships import make_target_node_matcher
 from cartography.models.core.relationships import TargetNodeMatcher
-from cartography.models.core.relationships import OtherRelationships
 
 
 @dataclass(frozen=True)
@@ -25,16 +24,4 @@ class S3BucketToSNSTopicRel(CartographyRelSchema):
     )
     direction: LinkDirection = LinkDirection.OUTWARD
     rel_label: str = "NOTIFIES"
-    properties: S3BucketToSNSTopicRelProperties = S3BucketToSNSTopicRelProperties()
-
-
-@dataclass(frozen=True)
-class S3BucketSchema(CartographyNodeSchema):
-    label: str = "S3Bucket"
-    properties: S3BucketNodeProperties = S3BucketNodeProperties()
-    sub_resource_relationship: S3BucketToAWSAccountRel = S3BucketToAWSAccountRel()
-    other_relationships: OtherRelationships = OtherRelationships(
-        [
-            S3BucketToSNSTopicRel(),
-        ]
-    ) 
+    properties: S3BucketToSNSTopicRelProperties = S3BucketToSNSTopicRelProperties() 

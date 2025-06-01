@@ -787,7 +787,7 @@ def parse_notification_configuration(bucket: str, notification_config: Optional[
     """
     if not notification_config or "TopicConfigurations" not in notification_config:
         return []
-
+    
     notifications = []
     for topic_config in notification_config.get("TopicConfigurations", []):
         notification = {
@@ -798,7 +798,6 @@ def parse_notification_configuration(bucket: str, notification_config: Optional[
             "filter_suffix": topic_config.get("Filter", {}).get("S3Key", {}).get("FilterRules", [{}])[1].get("Value", ""),
         }
         notifications.append(notification)
-
     return notifications
 
 
@@ -811,8 +810,8 @@ def _load_s3_notifications(
     """
     Ingest S3 bucket to SNS topic notification relationships into neo4j.
     """
-    from cartography.models.aws.s3.notification import S3BucketToSNSTopic
-
+    from cartography.models.aws.s3.notification import S3BucketToSNSTopicRel
+    
     ingest_notifications = """
     UNWIND $notifications AS notification
     MATCH (bucket:S3Bucket) where bucket.name = notification.bucket
@@ -824,7 +823,6 @@ def _load_s3_notifications(
         r.filter_suffix = notification.filter_suffix,
         r.lastupdated = $UpdateTag
     """
-
     neo4j_session.run(
         ingest_notifications,
         notifications=notifications,
@@ -913,27 +911,32 @@ def sync(
     update_tag: int,
     common_job_parameters: Dict,
 ) -> None:
+    """
+    Sync S3 bucket data.
+    """
     logger.info("Syncing S3 for account '%s'.", current_aws_account_id)
-    bucket_data = get_s3_bucket_list(boto3_session)
-
-    load_s3_buckets(neo4j_session, bucket_data, current_aws_account_id, update_tag)
-    cleanup_s3_buckets(neo4j_session, common_job_parameters)
-
-    acl_and_policy_data_iter = get_s3_bucket_details(boto3_session, bucket_data)
-    load_s3_details(
-        neo4j_session,
-        acl_and_policy_data_iter,
-        current_aws_account_id,
-        update_tag,
-    )
+    
+    # Get S3 bucket list
+    buckets = get_s3_bucket_list(boto3_session)
+    
+    # Load buckets
+    load_s3_buckets(neo4j_session, buckets, current_aws_account_id, update_tag)
+    
+    # Get bucket details
+    s3_details_iter = get_s3_bucket_details(boto3_session, buckets)
+    
+    # Load bucket details including notifications
+    load_s3_details(neo4j_session, s3_details_iter, current_aws_account_id, update_tag)
+    
+    # Cleanup
     cleanup_s3_bucket_acl_and_policy(neo4j_session, common_job_parameters)
     cleanup_s3_bucket_notifications(neo4j_session, common_job_parameters)
-
+    
     merge_module_sync_metadata(
         neo4j_session,
-        group_type="AWSAccount",
+        group_type='AWSAccount',
         group_id=current_aws_account_id,
-        synced_type="S3Bucket",
+        synced_type='S3Bucket',
         update_tag=update_tag,
         stat_handler=stat_handler,
     )
