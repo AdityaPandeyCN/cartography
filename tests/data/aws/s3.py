@@ -153,6 +153,7 @@ S3_NOTIFICATIONS = {
         },
     ],
 }
+
 SNS_TOPICS = [
     {
         "TopicArn": "arn:aws:sns:us-east-1:123456789012:test-topic",
@@ -162,9 +163,6 @@ SNS_TOPICS = [
         "SubscriptionsPending": 0,
         "SubscriptionsConfirmed": 1,
         "SubscriptionsDeleted": 0,
-        "DeliveryPolicy": "",
-        "EffectiveDeliveryPolicy": "",
-        "KmsMasterKeyId": "",
     },
 ]
 

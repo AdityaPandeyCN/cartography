@@ -3676,3 +3676,14 @@ Representation of an AWS [Secrets Manager Secret Version](https://docs.aws.amazo
     ```
     (SecretsManagerSecretVersion)-[ENCRYPTED_BY]->(AWSKMSKey)
     ```
+
+### S3Bucket
+### Relationships
+- S3 Buckets can notify SNS Topics
+    ```
+    (:S3Bucket)-[:NOTIFIES]->(:SNSTopic)
+    ```
+    Properties:
+    - event_type: The S3 event that triggers the notification
+    - filter_prefix: Optional prefix filter for the notification
+    - filter_suffix: Optional suffix filter for the notification
