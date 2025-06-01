@@ -136,3 +136,47 @@ LIST_STATEMENTS = {
         },
     ),
 }
+
+S3_NOTIFICATIONS = {
+    "TopicConfigurations": [
+        {
+            "TopicArn": "arn:aws:sns:us-east-1:123456789012:test-topic",
+            "Event": "s3:ObjectCreated:*",
+            "Filter": {
+                "S3Key": {
+                    "FilterRules": [
+                        {"Name": "prefix", "Value": "test/"},
+                        {"Name": "suffix", "Value": ".txt"},
+                    ],
+                },
+            },
+        },
+    ],
+}
+SNS_TOPICS = [
+    {
+        "TopicArn": "arn:aws:sns:us-east-1:123456789012:test-topic",
+        "TopicName": "test-topic",
+        "DisplayName": "Test Topic",
+        "Owner": "123456789012",
+        "SubscriptionsPending": 0,
+        "SubscriptionsConfirmed": 1,
+        "SubscriptionsDeleted": 0,
+        "DeliveryPolicy": "",
+        "EffectiveDeliveryPolicy": "",
+        "KmsMasterKeyId": "",
+    },
+]
+
+SNS_TOPIC_ATTRIBUTES = {
+    "Attributes": {
+        "DisplayName": "Test Topic",
+        "Owner": "123456789012",
+        "SubscriptionsPending": "0",
+        "SubscriptionsConfirmed": "1",
+        "SubscriptionsDeleted": "0",
+        "DeliveryPolicy": "",
+        "EffectiveDeliveryPolicy": "",
+        "KmsMasterKeyId": "",
+    },
+}

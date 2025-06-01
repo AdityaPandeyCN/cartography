@@ -1,0 +1,8 @@
+{
+    "statements": [
+        {
+            "query": "MATCH (n:S3Bucket)-[r:NOTIFIES]->(m:SNSTopic) WHERE r.lastupdated <> $UPDATE_TAG WITH r DELETE r"
+        }
+    ],
+    "name": "cleanup S3 notifications"
+} 

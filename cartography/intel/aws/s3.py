@@ -35,9 +35,9 @@ def get_s3_bucket_list(boto3_session: boto3.session.Session) -> List[Dict]:
     buckets = client.list_buckets()
     for bucket in buckets["Buckets"]:
         try:
-            bucket["Region"] = client.get_bucket_location(Bucket=bucket["Name"])[
-                "LocationConstraint"
-            ]
+            location = client.get_bucket_location(Bucket=bucket["Name"])["LocationConstraint"]
+            # For buckets in us-east-1, get_bucket_location returns an empty location constraint
+            bucket["Region"] = location if location else "us-east-1"
         except ClientError as e:
             if _is_common_exception(e, bucket):
                 bucket["Region"] = None
@@ -450,6 +450,7 @@ def load_s3_details(
     encryption_configs: List[Dict] = []
     versioning_configs: List[Dict] = []
     public_access_block_configs: List[Dict] = []
+    notifications: List[Dict] = []
     for (
         bucket,
         acl,
@@ -479,6 +480,13 @@ def load_s3_details(
         )
         if parsed_public_access_block is not None:
             public_access_block_configs.append(parsed_public_access_block)
+        
+        # Get notification configuration
+        client = boto3_session.client("s3", bucket["Region"])
+        notification_config = get_notification_configuration(bucket, client)
+        parsed_notifications = parse_notification_configuration(bucket["Name"], notification_config)
+        if parsed_notifications:
+            notifications.extend(parsed_notifications)
 
     # cleanup existing policy properties set on S3 Buckets
     run_cleanup_job(
@@ -488,12 +496,12 @@ def load_s3_details(
     )
 
     _load_s3_acls(neo4j_session, acls, aws_account_id, update_tag)
-
     _load_s3_policies(neo4j_session, policies, update_tag)
     _load_s3_policy_statements(neo4j_session, statements, update_tag)
     _load_s3_encryption(neo4j_session, encryption_configs, update_tag)
     _load_s3_versioning(neo4j_session, versioning_configs, update_tag)
     _load_s3_public_access_block(neo4j_session, public_access_block_configs, update_tag)
+    _load_s3_notifications(neo4j_session, notifications, update_tag)
     _set_default_values(neo4j_session, aws_account_id)
 
 
@@ -752,6 +760,79 @@ def parse_public_access_block(
 
 
 @timeit
+def get_notification_configuration(bucket: Dict, client: botocore.client.BaseClient) -> Optional[Dict]:
+    """
+    Gets the S3 bucket notification configuration.
+    """
+    notification_config = None
+    try:
+        notification_config = client.get_bucket_notification_configuration(Bucket=bucket["Name"])
+    except ClientError as e:
+        if _is_common_exception(e, bucket):
+            pass
+        else:
+            raise
+    except EndpointConnectionError:
+        logger.warning(
+            f"Failed to retrieve S3 bucket notification configuration for {bucket['Name']} - Could not connect to the endpoint URL",
+        )
+    return notification_config
+
+
+@timeit
+def parse_notification_configuration(bucket: str, notification_config: Optional[Dict]) -> List[Dict]:
+    """
+    Parse S3 bucket notification configuration to extract SNS topic notifications.
+    Returns a list of notification configurations.
+    """
+    if not notification_config or "TopicConfigurations" not in notification_config:
+        return []
+
+    notifications = []
+    for topic_config in notification_config.get("TopicConfigurations", []):
+        notification = {
+            "bucket": bucket,
+            "TopicArn": topic_config["TopicArn"],
+            "event_type": topic_config["Event"],
+            "filter_prefix": topic_config.get("Filter", {}).get("S3Key", {}).get("FilterRules", [{}])[0].get("Value", ""),
+            "filter_suffix": topic_config.get("Filter", {}).get("S3Key", {}).get("FilterRules", [{}])[1].get("Value", ""),
+        }
+        notifications.append(notification)
+
+    return notifications
+
+
+@timeit
+def _load_s3_notifications(
+    neo4j_session: neo4j.Session,
+    notifications: List[Dict],
+    update_tag: int,
+) -> None:
+    """
+    Ingest S3 bucket to SNS topic notification relationships into neo4j.
+    """
+    from cartography.models.aws.s3.notification import S3BucketToSNSTopic
+
+    ingest_notifications = """
+    UNWIND $notifications AS notification
+    MATCH (bucket:S3Bucket) where bucket.name = notification.bucket
+    MATCH (topic:SNSTopic) where topic.arn = notification.TopicArn
+    MERGE (bucket)-[r:NOTIFIES]->(topic)
+    ON CREATE SET r.firstseen = timestamp()
+    SET r.event_type = notification.event_type,
+        r.filter_prefix = notification.filter_prefix,
+        r.filter_suffix = notification.filter_suffix,
+        r.lastupdated = $UpdateTag
+    """
+
+    neo4j_session.run(
+        ingest_notifications,
+        notifications=notifications,
+        UpdateTag=update_tag,
+    )
+
+
+@timeit
 def load_s3_buckets(
     neo4j_session: neo4j.Session,
     data: Dict,
@@ -812,6 +893,18 @@ def cleanup_s3_bucket_acl_and_policy(
 
 
 @timeit
+def cleanup_s3_bucket_notifications(neo4j_session: neo4j.Session, common_job_parameters: Dict) -> None:
+    """
+    Clean up S3 bucket notification relationships.
+    """
+    run_cleanup_job(
+        "aws_s3_notifications_cleanup.json",
+        neo4j_session,
+        common_job_parameters,
+    )
+
+
+@timeit
 def sync(
     neo4j_session: neo4j.Session,
     boto3_session: boto3.session.Session,
@@ -834,6 +927,7 @@ def sync(
         update_tag,
     )
     cleanup_s3_bucket_acl_and_policy(neo4j_session, common_job_parameters)
+    cleanup_s3_bucket_notifications(neo4j_session, common_job_parameters)
 
     merge_module_sync_metadata(
         neo4j_session,
