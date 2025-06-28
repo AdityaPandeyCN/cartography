@@ -16,6 +16,7 @@ from . import eks
 from . import elasticache
 from . import elasticsearch
 from . import emr
+from . import eventbridge
 from . import iam
 from . import identitycenter
 from . import inspector
@@ -108,4 +109,5 @@ RESOURCE_FUNCTIONS: Dict[str, Callable[..., None]] = {
     "cloudtrail": cloudtrail.sync,
     "cloudwatch": cloudwatch.sync,
     "efs": efs.sync,
+    "eventbridge": eventbridge.sync,
 }
