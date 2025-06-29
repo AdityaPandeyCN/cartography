@@ -1,13 +1,15 @@
 from unittest.mock import patch
 
 import cartography.intel.aws.eventbridge
-from cartography.intel.aws.eventbridge import sync_event_rules
+from cartography.intel.aws.eventbridge import sync
 from tests.data.aws.eventbridge.event_rules import MOCK_EVENT_RULES_RESPONSE
-from tests.integration.util import check_nodes, check_rels
+from tests.integration.util import check_nodes
+from tests.integration.util import check_rels
 
 TEST_ACCOUNT_ID = "123456789012"
 TEST_REGION = "us-east-1"
 TEST_UPDATE_TAG = 1234567890
+
 
 @patch.object(
     cartography.intel.aws.eventbridge,
@@ -18,10 +20,10 @@ def test_sync_event_rules_nodes(mock_get_rules, neo4j_session):
     """EventRule nodes are created with expected labels/properties."""
     common_job_parameters = {"UPDATE_TAG": TEST_UPDATE_TAG, "AWS_ID": TEST_ACCOUNT_ID}
 
-    sync_event_rules(
+    sync(
         neo4j_session,
         boto3_session=None,  # API calls mocked
-        region=TEST_REGION,
+        regions=[TEST_REGION],
         current_aws_account_id=TEST_ACCOUNT_ID,
         update_tag=TEST_UPDATE_TAG,
         common_job_parameters=common_job_parameters,
@@ -59,7 +61,11 @@ def test_sync_event_rules_nodes(mock_get_rules, neo4j_session):
             "ENABLED",
         ),
     }
-    assert check_nodes(neo4j_session, "EventRule", ["arn", "name", "state"]) == expected_nodes
+    assert (
+        check_nodes(neo4j_session, "EventRule", ["arn", "name", "state"])
+        == expected_nodes
+    )
+
 
 @patch.object(
     cartography.intel.aws.eventbridge,
@@ -79,32 +85,54 @@ def test_sync_event_rules_relationships_to_account(mock_get_rules, neo4j_session
         update_tag=TEST_UPDATE_TAG,
     )
 
-    sync_event_rules(
+    sync(
         neo4j_session,
         None,
-        TEST_REGION,
+        [TEST_REGION],
         TEST_ACCOUNT_ID,
         TEST_UPDATE_TAG,
         common_job_parameters,
     )
 
     expected = {
-        ("arn:aws:events:us-east-1:123456789012:rule/hourly-batch-job", TEST_ACCOUNT_ID),
-        ("arn:aws:events:us-east-1:123456789012:rule/ec2-state-change", TEST_ACCOUNT_ID),
-        ("arn:aws:events:us-east-1:123456789012:rule/cross-account-events", TEST_ACCOUNT_ID),
-        ("arn:aws:events:us-east-1:123456789012:rule/codebuild-trigger", TEST_ACCOUNT_ID),
-        ("arn:aws:events:us-east-1:123456789012:rule/pipeline-trigger", TEST_ACCOUNT_ID),
-        ("arn:aws:events:us-east-1:123456789012:rule/api-gateway-trigger", TEST_ACCOUNT_ID),
+        (
+            "arn:aws:events:us-east-1:123456789012:rule/hourly-batch-job",
+            TEST_ACCOUNT_ID,
+        ),
+        (
+            "arn:aws:events:us-east-1:123456789012:rule/ec2-state-change",
+            TEST_ACCOUNT_ID,
+        ),
+        (
+            "arn:aws:events:us-east-1:123456789012:rule/cross-account-events",
+            TEST_ACCOUNT_ID,
+        ),
+        (
+            "arn:aws:events:us-east-1:123456789012:rule/codebuild-trigger",
+            TEST_ACCOUNT_ID,
+        ),
+        (
+            "arn:aws:events:us-east-1:123456789012:rule/pipeline-trigger",
+            TEST_ACCOUNT_ID,
+        ),
+        (
+            "arn:aws:events:us-east-1:123456789012:rule/api-gateway-trigger",
+            TEST_ACCOUNT_ID,
+        ),
     }
-    assert check_rels(
-        neo4j_session,
-        "EventRule",
-        "arn",
-        "AWSAccount",
-        "id",
-        "RESOURCE",
-        rel_direction_right=False,
-    ) == expected
+    assert (
+        check_rels(
+            neo4j_session,
+            "EventRule",
+            "arn",
+            "AWSAccount",
+            "id",
+            "RESOURCE",
+            rel_direction_right=False,
+        )
+        == expected
+    )
+
 
 @patch.object(
     cartography.intel.aws.eventbridge,
@@ -130,10 +158,10 @@ def test_sync_event_rules_relationships_to_targets(mock_get_rules, neo4j_session
         """
     )
 
-    sync_event_rules(
+    sync(
         neo4j_session,
         None,
-        TEST_REGION,
+        [TEST_REGION],
         TEST_ACCOUNT_ID,
         TEST_UPDATE_TAG,
         common_job_parameters,
@@ -141,86 +169,124 @@ def test_sync_event_rules_relationships_to_targets(mock_get_rules, neo4j_session
 
     # Lambda
     expected_lambda = {
-        ("arn:aws:events:us-east-1:123456789012:rule/hourly-batch-job", "arn:aws:lambda:us-east-1:123456789012:function:ProcessBatchJob"),
-        ("arn:aws:events:us-east-1:123456789012:rule/ec2-state-change", "arn:aws:lambda:us-east-1:123456789012:function:HandleEC2StateChange"),
+        (
+            "arn:aws:events:us-east-1:123456789012:rule/hourly-batch-job",
+            "arn:aws:lambda:us-east-1:123456789012:function:ProcessBatchJob",
+        ),
+        (
+            "arn:aws:events:us-east-1:123456789012:rule/ec2-state-change",
+            "arn:aws:lambda:us-east-1:123456789012:function:HandleEC2StateChange",
+        ),
     }
-    assert check_rels(
-        neo4j_session,
-        "EventRule",
-        "arn",
-        "AWSLambda",
-        "id",
-        "TRIGGERS",
-        rel_direction_right=True,
-    ) == expected_lambda
+    assert (
+        check_rels(
+            neo4j_session,
+            "EventRule",
+            "arn",
+            "AWSLambda",
+            "id",
+            "TRIGGERS",
+            rel_direction_right=True,
+        )
+        == expected_lambda
+    )
 
     # SNS
     expected_sns = {
-        ("arn:aws:events:us-east-1:123456789012:rule/hourly-batch-job", "arn:aws:sns:us-east-1:123456789012:batch-notifications")
+        (
+            "arn:aws:events:us-east-1:123456789012:rule/hourly-batch-job",
+            "arn:aws:sns:us-east-1:123456789012:batch-notifications",
+        )
     }
-    assert check_rels(
-        neo4j_session,
-        "EventRule",
-        "arn",
-        "SNSTopic",
-        "arn",
-        "PUBLISHES_TO",
-        rel_direction_right=True,
-    ) == expected_sns
+    assert (
+        check_rels(
+            neo4j_session,
+            "EventRule",
+            "arn",
+            "SNSTopic",
+            "arn",
+            "PUBLISHES_TO",
+            rel_direction_right=True,
+        )
+        == expected_sns
+    )
 
     # SQS
     expected_sqs = {
-        ("arn:aws:events:us-east-1:123456789012:rule/ec2-state-change", "arn:aws:sqs:us-east-1:123456789012:ec2-events-queue")
+        (
+            "arn:aws:events:us-east-1:123456789012:rule/ec2-state-change",
+            "arn:aws:sqs:us-east-1:123456789012:ec2-events-queue",
+        )
     }
-    assert check_rels(
-        neo4j_session,
-        "EventRule",
-        "arn",
-        "SQSQueue",
-        "arn",
-        "SENDS_TO",
-        rel_direction_right=True,
-    ) == expected_sqs
+    assert (
+        check_rels(
+            neo4j_session,
+            "EventRule",
+            "arn",
+            "SQSQueue",
+            "arn",
+            "SENDS_TO",
+            rel_direction_right=True,
+        )
+        == expected_sqs
+    )
 
     # CodeBuild
     expected_cb = {
-        ("arn:aws:events:us-east-1:123456789012:rule/codebuild-trigger", "arn:aws:codebuild:us-east-1:123456789012:project/MyBuildProject")
+        (
+            "arn:aws:events:us-east-1:123456789012:rule/codebuild-trigger",
+            "arn:aws:codebuild:us-east-1:123456789012:project/MyBuildProject",
+        )
     }
-    assert check_rels(
-        neo4j_session,
-        "EventRule",
-        "arn",
-        "CodeBuildProject",
-        "arn",
-        "TRIGGERS_BUILD",
-        rel_direction_right=True,
-    ) == expected_cb
+    assert (
+        check_rels(
+            neo4j_session,
+            "EventRule",
+            "arn",
+            "CodeBuildProject",
+            "arn",
+            "TRIGGERS_BUILD",
+            rel_direction_right=True,
+        )
+        == expected_cb
+    )
 
     # CodePipeline
     expected_cp = {
-        ("arn:aws:events:us-east-1:123456789012:rule/pipeline-trigger", "arn:aws:codepipeline:us-east-1:123456789012:my-pipeline")
+        (
+            "arn:aws:events:us-east-1:123456789012:rule/pipeline-trigger",
+            "arn:aws:codepipeline:us-east-1:123456789012:my-pipeline",
+        )
     }
-    assert check_rels(
-        neo4j_session,
-        "EventRule",
-        "arn",
-        "CodePipeline",
-        "arn",
-        "STARTS_PIPELINE",
-        rel_direction_right=True,
-    ) == expected_cp
+    assert (
+        check_rels(
+            neo4j_session,
+            "EventRule",
+            "arn",
+            "CodePipeline",
+            "arn",
+            "STARTS_PIPELINE",
+            rel_direction_right=True,
+        )
+        == expected_cp
+    )
 
     # API Gateway
     expected_api = {
-        ("arn:aws:events:us-east-1:123456789012:rule/api-gateway-trigger", "arn:aws:execute-api:us-east-1:123456789012:abcdef123/prod/POST/webhook")
+        (
+            "arn:aws:events:us-east-1:123456789012:rule/api-gateway-trigger",
+            "arn:aws:execute-api:us-east-1:123456789012:abcdef123/prod/POST/webhook",
+        )
     }
-    assert check_rels(
-        neo4j_session,
-        "EventRule",
-        "arn",
-        "APIGatewayRestAPI",
-        "id",
-        "INVOKES_API",
-        rel_direction_right=True,
-    ) == expected_api 
-
+    assert (
+        check_rels(
+            neo4j_session,
+            "EventRule",
+            "arn",
+            "APIGatewayRestAPI",
+            "id",
+            "INVOKES_API",
+            rel_direction_right=True,
+        )
+        == expected_api
+    )

@@ -1,6 +1,7 @@
 from cartography.intel.aws.eventbridge import transform_event_rules
 from tests.data.aws.eventbridge.event_rules import MOCK_EVENT_RULES_RESPONSE
 
+
 def test_transform_event_rules():
     """Validate the transform logic for EventBridge rules."""
     region = "us-east-1"
@@ -21,7 +22,7 @@ def test_transform_event_rules():
 
     # Validate event rule with mixed targets
     ec2_rule = next(r for r in result if r["Name"] == "ec2-state-change")
-    assert ec2_rule["EventPattern"].startswith("{\"source\"")
+    assert ec2_rule["EventPattern"].startswith('{"source"')
     assert ec2_rule["sqs_queue_arns"] == [
         "arn:aws:sqs:us-east-1:123456789012:ec2-events-queue"
     ]
@@ -58,6 +59,7 @@ def test_transform_event_rules():
         "arn:aws:execute-api:us-east-1:123456789012:abcdef123/prod/POST/webhook"
     ]
 
+
 def test_transform_event_rules_handles_missing_fields():
     """Ensure missing optional fields are handled gracefully."""
     minimal_data = {
@@ -76,5 +78,4 @@ def test_transform_event_rules_handles_missing_fields():
 
     assert rule["Name"] == "minimal-rule"
     assert rule["EventBusName"] == "default"
-    assert rule["lambda_function_arns"] == [] 
-
+    assert rule["lambda_function_arns"] == []

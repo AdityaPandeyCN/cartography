@@ -9,13 +9,15 @@ from cartography.graph.job import GraphJob
 from cartography.intel.aws.ec2.util import get_botocore_config
 from cartography.models.aws.eventbridge.event_rule import EventRuleSchema
 from cartography.stats import get_stats_client
-from cartography.util import aws_handle_regions, merge_module_sync_metadata, timeit
+from cartography.util import aws_handle_regions
+from cartography.util import merge_module_sync_metadata
+from cartography.util import timeit
 
 logger = logging.getLogger(__name__)
 stat_handler = get_stats_client(__name__)
 
 
-
+DEFAULT_EVENT_BUS = "default"
 
 
 @timeit
@@ -44,6 +46,7 @@ def get_event_rules(
         targets_by_rule[rule["Name"]] = targets
 
     return {"Rules": rules, "Targets": targets_by_rule}
+
 
 def transform_event_rules(data: dict[str, Any], region: str) -> list[dict[str, Any]]:
     """Shape the raw AWS API response so it lines up with EventRuleSchema."""
@@ -99,6 +102,8 @@ def transform_event_rules(data: dict[str, Any], region: str) -> list[dict[str, A
                 firehose_delivery_stream_arns.append(target_arn)
             elif ":redshift:" in target_arn and ":cluster:" in target_arn:
                 redshift_cluster_arns.append(target_arn)
+            else:
+                logger.debug(f"Unknown target type for ARN: {target_arn}")
 
         item: dict[str, Any] = {
             "Arn": rule["Arn"],
@@ -108,11 +113,10 @@ def transform_event_rules(data: dict[str, Any], region: str) -> list[dict[str, A
             "EventPattern": rule.get("EventPattern"),
             "ScheduleExpression": rule.get("ScheduleExpression"),
             "RoleArn": rule.get("RoleArn"),
-            "EventBusName": rule.get("EventBusName", "default"),
+            "EventBusName": rule.get("EventBusName", DEFAULT_EVENT_BUS),
             "ManagedBy": rule.get("ManagedBy"),
             "CreatedBy": rule.get("CreatedBy"),
             "Region": region,
-            
             "lambda_function_arns": lambda_function_arns,
             "sns_topic_arns": sns_topic_arns,
             "sqs_queue_arns": sqs_queue_arns,
@@ -132,6 +136,7 @@ def transform_event_rules(data: dict[str, Any], region: str) -> list[dict[str, A
 
     return transformed
 
+
 def load_event_rules(
     neo4j_session: neo4j.Session,
     data: list[dict[str, Any]],
@@ -145,6 +150,9 @@ def load_event_rules(
         len(data),
         region,
     )
+    # Track statistics for monitoring
+    stat_handler.incr("eventbridge.rules.loaded", len(data))
+
     load(
         neo4j_session,
         EventRuleSchema(),
@@ -154,6 +162,7 @@ def load_event_rules(
         AWS_ID=aws_account_id,
     )
 
+
 def cleanup_event_rules(
     neo4j_session: neo4j.Session,
     common_job_parameters: dict[str, Any],
@@ -162,6 +171,7 @@ def cleanup_event_rules(
     GraphJob.from_node_schema(EventRuleSchema(), common_job_parameters).run(
         neo4j_session
     )
+
 
 @timeit
 def sync(
@@ -196,31 +206,7 @@ def sync(
         neo4j_session,
         group_type="AWSAccount",
         group_id=current_aws_account_id,
-        synced_type="CloudWatchEventRule",
+        synced_type="EventRule",
         update_tag=update_tag,
         stat_handler=stat_handler,
     )
-
-def sync_event_rules(
-    neo4j_session: neo4j.Session,
-    boto3_session: boto3.session.Session,
-    region: str,
-    current_aws_account_id: str,
-    update_tag: int,
-    common_job_parameters: dict[str, Any],
-) -> None:
-    """Compatibility wrapper used by unit/integration tests.
-
-    Keeps the public signature stable while the main sync() expects a list
-    of regions. In production the `aws` package calls `sync()` through the
-    RESOURCE_FUNCTIONS registry, but tests import this helper directly.
-    """
-    sync(
-        neo4j_session=neo4j_session,
-        boto3_session=boto3_session,
-        regions=[region],
-        current_aws_account_id=current_aws_account_id,
-        update_tag=update_tag,
-        common_job_parameters=common_job_parameters,
-    )
-

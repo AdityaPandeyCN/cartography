@@ -1,3 +1,6 @@
+import json
+from typing import Any
+
 MOCK_EVENT_RULES_RESPONSE = {
     "Rules": [
         {
@@ -13,7 +16,12 @@ MOCK_EVENT_RULES_RESPONSE = {
         {
             "Name": "ec2-state-change",
             "Arn": "arn:aws:events:us-east-1:123456789012:rule/ec2-state-change",
-            "EventPattern": "{\"source\": [\"aws.ec2\"], \"detail-type\": [\"EC2 Instance State-change Notification\"]}",
+            "EventPattern": json.dumps(
+                {
+                    "source": ["aws.ec2"],
+                    "detail-type": ["EC2 Instance State-change Notification"],
+                }
+            ),
             "State": "ENABLED",
             "Description": "React to EC2 state changes",
             "ScheduleExpression": None,
@@ -23,7 +31,9 @@ MOCK_EVENT_RULES_RESPONSE = {
         {
             "Name": "cross-account-events",
             "Arn": "arn:aws:events:us-east-1:123456789012:rule/cross-account-events",
-            "EventPattern": "{\"account\": [\"987654321098\"], \"source\": [\"custom.app\"]}",
+            "EventPattern": json.dumps(
+                {"account": ["987654321098"], "source": ["custom.app"]}
+            ),
             "State": "DISABLED",
             "Description": "Process events from partner account",
             "ScheduleExpression": None,
@@ -34,7 +44,12 @@ MOCK_EVENT_RULES_RESPONSE = {
         {
             "Name": "codebuild-trigger",
             "Arn": "arn:aws:events:us-east-1:123456789012:rule/codebuild-trigger",
-            "EventPattern": "{\"source\": [\"aws.codecommit\"], \"detail-type\": [\"CodeCommit Repository State Change\"]}",
+            "EventPattern": json.dumps(
+                {
+                    "source": ["aws.codecommit"],
+                    "detail-type": ["CodeCommit Repository State Change"],
+                }
+            ),
             "State": "ENABLED",
             "Description": "Trigger builds on code changes",
             "ScheduleExpression": None,
@@ -54,7 +69,9 @@ MOCK_EVENT_RULES_RESPONSE = {
         {
             "Name": "api-gateway-trigger",
             "Arn": "arn:aws:events:us-east-1:123456789012:rule/api-gateway-trigger",
-            "EventPattern": "{\"source\": [\"custom.myapp\"], \"detail-type\": [\"User Action\"]}",
+            "EventPattern": json.dumps(
+                {"source": ["custom.myapp"], "detail-type": ["User Action"]}
+            ),
             "State": "ENABLED",
             "Description": "Forward custom events to API Gateway",
             "ScheduleExpression": None,
@@ -68,7 +85,7 @@ MOCK_EVENT_RULES_RESPONSE = {
                 "Id": "1",
                 "Arn": "arn:aws:lambda:us-east-1:123456789012:function:ProcessBatchJob",
                 "RoleArn": None,
-                "Input": "{\"action\": \"process\"}",
+                "Input": '{"action": "process"}',
                 "InputPath": None,
                 "InputTransformer": None,
             },
@@ -162,5 +179,4 @@ MOCK_EVENT_RULES_RESPONSE = {
 }
 
 # Empty response for testing edge-cases
-MOCK_EVENT_RULES_EMPTY_RESPONSE = {"Rules": [], "Targets": {}} 
-
+MOCK_EVENT_RULES_EMPTY_RESPONSE: dict[str, Any] = {"Rules": [], "Targets": {}}
