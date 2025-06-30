@@ -1,6 +1,5 @@
 ## AWS Schema
 
-
 ### AWSAccount
 
 Representation of an AWS Account.
@@ -205,7 +204,6 @@ Representation of an AWS [Inspector Finding](https://docs.aws.amazon.com/inspect
     (:AWSAccount)-[:MEMBER]->(:AWSInspectorFinding)
     ```
 
-
 ### AWSInspectorPackage
 
 Representation of an AWS [Inspector Finding Package](https://docs.aws.amazon.com/inspector/v2/APIReference/API_Finding.html)
@@ -227,7 +225,6 @@ Representation of an AWS [Inspector Finding Package](https://docs.aws.amazon.com
 |fixedinversion|Version the related finding was fixed in|
 |sourcelayerhash|Source layer hash for container images|
 
-
 #### Relationships
 
 - AWSInspectorFindings have AWSInspectorPackages.
@@ -242,11 +239,9 @@ Representation of an AWS [Inspector Finding Package](https://docs.aws.amazon.com
     (:AWSAccount)-[:RESOURCE]->(:AWSInspectorPackages)
     ```
 
-
 ### AWSInstanceProfile
 
 Representation of an AWS [IAM Instance Profile](https://docs.aws.amazon.com/IAM/latest/APIReference/API_InstanceProfile.html)
-
 
 | Field                 | Description                                        |
 |-----------------------|----------------------------------------------------|
@@ -257,7 +252,6 @@ Representation of an AWS [IAM Instance Profile](https://docs.aws.amazon.com/IAM/
 | instance_profile_id   | The instance profile id                            |
 | instance_profile_name | The instance profile name                          |
 | path                  | e.g. '/'                                           |
-
 
 #### Relationships
 
@@ -275,7 +269,6 @@ Representation of an AWS [IAM Instance Profile](https://docs.aws.amazon.com/IAM/
     ```cypher
     (:EC2Instance)-[:INSTANCE_PROFILE]->(:AWSInstanceProfile)
     ```
-
 
 ### AWSLambda
 
@@ -430,7 +423,6 @@ Representation of an [AWS Policy](https://docs.aws.amazon.com/IAM/latest/APIRefe
 | arn | The arn for this object |
 | **id** | The unique identifer for a policy. If the policy is managed this will be the Arn. If the policy is inline this will calculated as _AWSPrincipal_/inline_policy/_PolicyName_|
 
-
 #### Relationships
 
 - `AWSPrincipal` contains `AWSPolicy`
@@ -459,7 +451,6 @@ Representation of an [AWS Policy Statement](https://docs.aws.amazon.com/IAM/late
 | effect | "Allow" or "Deny" - the effect of this statement |
 | **id** | The unique identifier for a statement. <br>If the statement has an Sid the id will be calculated as _AWSPolicy.id_/statements/_Sid_. <br>If the statement has no Sid the id will be calculated as  _AWSPolicy.id_/statements/_index of statement in statement list_ |
 
-
 #### Relationships
 
 - `AWSPolicy` contains `AWSPolicyStatement`
@@ -467,7 +458,6 @@ Representation of an [AWS Policy Statement](https://docs.aws.amazon.com/IAM/late
     ```cypher
     (AWSPolicy)-[STATEMENTS]->(AWSPolicyStatement)
     ```
-
 
 ### AWSPrincipal
 Representation of an [AWSPrincipal](https://docs.aws.amazon.com/IAM/latest/APIReference/API_User.html).
@@ -482,7 +472,6 @@ Representation of an [AWSPrincipal](https://docs.aws.amazon.com/IAM/latest/APIRe
 | **arn** | AWS-unique identifier for this object |
 | userid | The stable and unique string identifying the principal.  |
 | passwordlastused | Datetime when this principal's password was last used
-
 
 #### Relationships
 
@@ -555,7 +544,6 @@ Representation of an [AWSUser](https://docs.aws.amazon.com/IAM/latest/APIReferen
     (AWSAccount)-[RESOURCE]->(AWSUser)
     ```
 
-
 ### AWSPrincipal::AWSRole
 
 Representation of an AWS [IAM Role](https://docs.aws.amazon.com/IAM/latest/APIReference/API_Role.html). An AWS Role is a type of AWS Principal.
@@ -568,7 +556,6 @@ Representation of an AWS [IAM Role](https://docs.aws.amazon.com/IAM/latest/APIRe
 | name | The friendly name that identifies the role.|
 | createdate| The date and time, in ISO 8601 date-time format, when the role was created. |
 | **arn** | AWS-unique identifier for this object |
-
 
 #### Relationships
 
@@ -708,7 +695,6 @@ More information on https://docs.aws.amazon.com/cli/latest/reference/ec2/describ
   (AWSVpc)<-[ACCEPTER_VPC]-(AWSPeeringConnection)
   ```
 
-
 ### Tag::AWSTag
 
 Representation of an AWS [Tag](https://docs.aws.amazon.com/resourcegroupstagging/latest/APIReference/API_Tag.html). AWS Tags can be applied to many objects.
@@ -831,7 +817,6 @@ Representation of an RDS [DB Subnet Group](https://docs.aws.amazon.com/AmazonRDS
     (DBSubnetGroup)-[TAGGED]->(AWSTag)
     ```
 
-
 ### DNSRecord
 
 Representation of a generic DNSRecord.
@@ -852,24 +837,20 @@ Representation of a generic DNSRecord.
     (DNSRecord)-[DNS_POINTS_TO]->(Ip)
     ```
 
-
 - DNSRecords/AWSDNSRecords can point to each other.
     ```
     (AWSDNSRecord, DNSRecord)-[DNS_POINTS_TO]->(AWSDNSRecord, DNSRecord)
     ```
-
 
 - DNSRecords can point to LoadBalancers.
     ```
     (DNSRecord)-[DNS_POINTS_TO]->(LoadBalancer)
     ```
 
-
 - DNSRecords can be members of DNSZones.
     ```
     (DNSRecord)-[MEMBER_OF_DNS_ZONE]->(DNSZone)
     ```
-
 
 ### DNSRecord::AWSDNSRecord
 Representation of an AWS DNS [ResourceRecordSet](https://docs.aws.amazon.com/Route53/latest/APIReference/API_ResourceRecordSet.html).
@@ -889,18 +870,15 @@ Representation of an AWS DNS [ResourceRecordSet](https://docs.aws.amazon.com/Rou
     (AWSDNSRecord, DNSRecord)-[DNS_POINTS_TO]->(AWSDNSRecord, DNSRecord)
     ```
 
-
 - AWSDNSRecords can point to LoadBalancers.
     ```
     (AWSDNSRecord)-[DNS_POINTS_TO]->(LoadBalancer, ESDomain)
     ```
 
-
 - AWSDNSRecords can be members of AWSDNSZones.
     ```
     (AWSDNSRecord)-[MEMBER_OF_DNS_ZONE]->(AWSDNSZone)
     ```
-
 
 ### DNSZone
 Representation of a generic DNS Zone.
@@ -912,14 +890,12 @@ Representation of a generic DNS Zone.
 |**name**| the name of the DNS zone|
 | comment | Comments about the zone |
 
-
 #### Relationships
 
 - DNSRecords can be members of DNSZones.
     ```
     (DNSRecord)-[MEMBER_OF_DNS_ZONE]->(DNSZone)
     ```
-
 
 ### DNSZone::AWSDNSZone
 
@@ -951,7 +927,6 @@ Representation of an AWS DNS [HostedZone](https://docs.aws.amazon.com/Route53/la
     (AWSDNSZone)<-[SUBZONE]-(AWSDNSZone)
     ```
 
-
 ### DynamoDBTable
 
 Representation of an AWS [DynamoDBTable](https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_ListTables.html).
@@ -970,7 +945,6 @@ Representation of an AWS [DynamoDBTable](https://docs.aws.amazon.com/amazondynam
     ```
     (AWSAccount)-[RESOURCE]->(DynamoDBTable)
     ```
-
 
 ### EC2Instance
 
@@ -1004,7 +978,6 @@ Our representation of an AWS [EC2 Instance](https://docs.aws.amazon.com/AWSEC2/l
 | bootmode | The boot mode of the instance.|
 | instancelifecycle | Indicates whether this is a Spot Instance or a Scheduled Instance.|
 | hibernationoptions | Indicates whether the instance is enabled for hibernation.|
-
 
 #### Relationships
 
@@ -1126,7 +1099,6 @@ Representation of an AWS EC2 [InstancePrivateIpAddress](https://docs.aws.amazon.
     (NetworkInterface)-[PRIVATE_IP_ADDRESS]->(EC2PrivateIp)
     ```
 
-
 ### EC2Reservation
 Representation of an AWS EC2 [Reservation](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_Reservation.html).
 
@@ -1151,7 +1123,6 @@ Representation of an AWS EC2 [Reservation](https://docs.aws.amazon.com/AWSEC2/la
     (EC2Instance)-[MEMBER_OF_EC2_RESERVATION]->(EC2Reservation)
     ```
 
-
 ### EC2SecurityGroup
 Representation of an AWS EC2 [Security Group](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_SecurityGroup.html).
 
@@ -1164,7 +1135,6 @@ Representation of an AWS EC2 [Security Group](https://docs.aws.amazon.com/AWSEC2
 | description | A description of the security group|
 | **id** | Same as `groupid` |
 | region | The AWS region this security group is installed in|
-
 
 #### Relationships
 
@@ -1200,7 +1170,6 @@ Representation of an AWS EC2 [Security Group](https://docs.aws.amazon.com/AWSEC2
     (RedshiftCluster)-[MEMBER_OF_EC2_SECURITY_GROUP]->(EC2SecurityGroup)
     ```
 
-
 ### EC2Subnet
 
 Representation of an AWS EC2 [Subnet](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_Subnet.html).
@@ -1223,7 +1192,6 @@ Representation of an AWS EC2 [Subnet](https://docs.aws.amazon.com/AWSEC2/latest/
 | availability_zone_id | The AZ ID of the subnet |
 | state | The current state of the subnet. |
 | assignipv6addressoncreation | Indicates whether a network interface created in this subnet (including a network interface created by RunInstances ) receives an IPv6 address. |
-
 
 #### Relationships
 
@@ -1252,12 +1220,10 @@ Representation of an AWS EC2 [Subnet](https://docs.aws.amazon.com/AWSEC2/latest/
     (LoadBalancerV2)-[PART_OF_SUBNET]->(EC2Subnet)
     ```
 
-
 - DB Subnet Groups consist of EC2 Subnets
     ```
     (DBSubnetGroup)-[RESOURCE]->(EC2Subnet)
     ```
-
 
 -  EC2 Subnets can be tagged with AWSTags.
     ```
@@ -1284,7 +1250,6 @@ Representation of an AWS EC2 [Subnet](https://docs.aws.amazon.com/AWSEC2/latest/
     (EC2RouteTableAssociation)-[ASSOCIATED_SUBNET]->(EC2Subnet)
     ```
 
-
 ### AWSInternetGateway
 
  Representation of an AWS [Interent Gateway](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_InternetGateway.html).
@@ -1294,7 +1259,6 @@ Representation of an AWS EC2 [Subnet](https://docs.aws.amazon.com/AWSEC2/latest/
  | **id** | Internet gateway ID |
  | arn | Amazon Resource Name |
  | region | The region of the gateway |
-
 
 #### Relationships
 
@@ -1318,7 +1282,6 @@ Representation of an AWS EC2 [Subnet](https://docs.aws.amazon.com/AWSEC2/latest/
     (EC2Route)-[ROUTES_TO_GATEWAY]->(AWSInternetGateway)
     ```
 
-
 ### ECRRepository
 
 Representation of an AWS Elastic Container Registry [Repository](https://docs.aws.amazon.com/AmazonECR/latest/APIReference/API_Repository.html).
@@ -1338,7 +1301,6 @@ Representation of an AWS Elastic Container Registry [Repository](https://docs.aw
     (:ECRRepository)-[:REPO_IMAGE]->(:ECRRepositoryImage)
     ```
 
-
 ### EC2NetworkAcl
 
  Representation of an AWS [EC2 Network ACL](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_NetworkAcl.html)
@@ -1351,7 +1313,6 @@ Representation of an AWS Elastic Container Registry [Repository](https://docs.aw
  | is_default     | Indicates whether this is the default network ACL for the VPC. |
  | vpc_id         | The ID of the VPC this ACL is associated with                  |
  | region         | The region                                                     |
-
 
 #### Relationships
 
@@ -1379,7 +1340,6 @@ Representation of an AWS Elastic Container Registry [Repository](https://docs.aw
     (:AWSAccount)-[:RESOURCE]->(:EC2NetworkAcl)
     ```
 
-
 ### EC2NetworkAclRule :: IpPermissionInbound / IpPermissionEgress
 
 Representation of an AWS [EC2 Network ACL Rule Entry](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_NetworkAclEntry.html)
@@ -1399,7 +1359,6 @@ For additional explanation see https://docs.aws.amazon.com/vpc/latest/userguide/
 | ruleaction     | Indicates whether to `allow` or `den` the traffic that matches the rule.                                                     |
 | region         | The region                                                                                                                   |
 
-
 #### Relationships
 
 -  EC2 Network ACLs have ingress and egress rules
@@ -1415,7 +1374,6 @@ For additional explanation see https://docs.aws.amazon.com/vpc/latest/userguide/
     ```
     (:AWSAccount)-[:RESOURCE]->(:EC2NetworkAclRule)
     ```
-
 
 ### ECRRepositoryImage
 
@@ -1451,7 +1409,6 @@ This way, more than one `ECRRepositoryImage` can reference/be connected to the s
     (:ECRRepositoryImage)-[:IMAGE]->(:ECRImage)
     ```
 
-
 ### ECRImage
 
 Representation of an ECR image identified by its digest (e.g. a SHA hash). Specifically, this is the "digest part" of
@@ -1481,7 +1438,6 @@ ECRRepositoryImage.
     (:TrivyImageFinding)-[:AFFECTS]->(:ECRImage)
     ```
 
-
 ### Package
 
 Representation of a software package, as found by an AWS ECR vulnerability scan.
@@ -1510,7 +1466,6 @@ Representation of a software package, as found by an AWS ECR vulnerability scan.
     ```
     (:Package)-[:SHOULD_UPDATE_TO]->(:TrivyFix)
     ```
-
 
 ### EKSCluster
 
@@ -1570,14 +1525,12 @@ Representation of an AWS [EMR Cluster](https://docs.aws.amazon.com/emr/latest/AP
 | log\_uri | The path to the Amazon S3 location where logs for this cluster are stored. |
 | servicerole | Service Role of the EMR Cluster |
 
-
 #### Relationships
 
 - EMR Clusters belong to AWS Accounts.
     ```
     (AWSAccount)-[RESOURCE]->(EMRCluster)
     ```
-
 
 ### ESDomain
 
@@ -1628,14 +1581,12 @@ Representation of a generic network endpoint.
 | protocol | The protocol of this endpoint |
 | port | The port of this endpoint |
 
-
 #### Relationships
 
 - Endpoints can be installed load balancers, though more specifically we would refer to these Endpoint nodes as [ELBListeners](#endpoint::elblistener).
     ```
     (LoadBalancer)-[ELB_LISTENER]->(Endpoint)
     ```
-
 
 ### Endpoint::ELBListener
 
@@ -1651,7 +1602,6 @@ Representation of an AWS Elastic Load Balancer [Listener](https://docs.aws.amazo
 | **id** | The ELB ID.  This is a concatenation of the DNS name, port, and protocol. |
 | instance\_port | The port open on the EC2 instance that this listener is connected to |
 | instance\_protocol | The protocol defined on the EC2 instance that this listener is connected to |
-
 
 #### Relationships
 
@@ -1701,14 +1651,12 @@ Represents a generic IP address.
 | **ip** | The IPv4 address |
 | **id** | Same as `ip` |
 
-
 #### Relationships
 
 - DNSRecords can point to IP addresses.
     ```
     (DNSRecord)-[DNS_POINTS_TO]->(Ip)
     ```
-
 
 ### IpRule
 
@@ -1724,14 +1672,12 @@ Represents a generic IP rule.  The creation of this node is currently derived fr
 | fromport | Lowest port in the range defined by this rule|
 | toport | Highest port in the range defined by this rule|
 
-
 #### Relationships
 
 - IpRules are defined from EC2SecurityGroups.
     ```
     (IpRule, IpPermissionInbound)-[MEMBER_OF_EC2_SECURITY_GROUP]->(EC2SecurityGroup)
     ```
-
 
 ### IpRule::IpPermissionInbound
 
@@ -1754,7 +1700,6 @@ An IpPermissionInbound node is a specific type of IpRule.  It represents a gener
     (IpRule, IpPermissionInbound)-[MEMBER_OF_EC2_SECURITY_GROUP]->(EC2SecurityGroup)
     ```
 
-
 ### LoadBalancer
 
 Represents a classic [AWS Elastic Load Balancer](https://docs.aws.amazon.com/elasticloadbalancing/2012-06-01/APIReference/API_LoadBalancerDescription.html).  See [spec for details](https://docs.aws.amazon.com/elasticloadbalancing/2012-06-01/APIReference/API_LoadBalancerDescription.html).
@@ -1772,7 +1717,6 @@ Represents a classic [AWS Elastic Load Balancer](https://docs.aws.amazon.com/ela
 |createdtime | The date and time the load balancer was created. |
 |canonicalhostedzonenameid| The ID of the Amazon Route 53 hosted zone for the load balancer. |
 | exposed\_internet | The `exposed_internet` flag is set to `True` when the load balancer's `scheme` field is set to `internet-facing`.  This indicates that the load balancer has a public DNS name that resolves to a public IP address. |
-
 
 #### Relationships
 
@@ -1795,7 +1739,6 @@ Represents a classic [AWS Elastic Load Balancer](https://docs.aws.amazon.com/ela
     ```
     (LoadBalancer)-[SUBNET]->(EC2Subnet)
     ```
-
 
 - LoadBalancers can be part of EC2 Subnets
     ```
@@ -1834,9 +1777,7 @@ Represents an Elastic Load Balancer V2 ([Application Load Balancer](https://docs
 |createdtime | The date and time the load balancer was created. |
 |canonicalhostedzonenameid| The ID of the Amazon Route 53 hosted zone for the load balancer. |
 
-
 #### Relationships
-
 
 - LoadBalancerV2's can be connected to EC2Instances and therefore expose them.
     ```
@@ -1901,7 +1842,6 @@ Representation of a generic Network Interface.  Currently however, we only creat
 | requester_managed  |  Indicates whether the interface is managed by the requester |
 | source_dest_check   | Indicates whether to validate network traffic to or from this network interface.  |
 | public_ip   | Public IPv4 address attached to the interface  |
-
 
 #### Relationships
 
@@ -1999,7 +1939,6 @@ Representation of an AWS [RedshiftCluster](https://docs.aws.amazon.com/redshift/
 | number\_of\_nodes | The number of compute nodes in the cluster. |
 | publicly_accessible | A boolean value that, if true, indicates that the cluster can be accessed from a public network. |
 | vpc_id | The identifier of the VPC the cluster is in, if the cluster is in a VPC. |
-
 
 #### Relationships
 
@@ -2118,8 +2057,6 @@ Representation of an AWS Relational Database Service [DBInstance](https://docs.a
 | auto\_minor\_version\_upgrade       | Specifies whether minor version upgrades are applied automatically to the DB instance during the maintenance window |
 | iam\_database\_authentication\_enabled       | Specifies if mapping of AWS Identity and Access Management (IAM) accounts to database accounts is enabled |
 
-
-
 #### Relationships
 
 - RDS Instances are part of AWS Accounts.
@@ -2190,8 +2127,6 @@ Representation of an AWS Relational Database Service [DBSnapshot](https://docs.a
 | storage\_throughput |  |
 | region | The AWS region of the snapshot |
 
-
-
 #### Relationships
 
 - RDS Snapshots are part of AWS Accounts.
@@ -2224,9 +2159,7 @@ Representation of an AWS S3 [Access Control List](https://docs.aws.amazon.com/Am
 | type |  The type of the [grantee](https://docs.aws.amazon.com/AmazonS3/latest/API/API_Grantee.html).  Either ``CanonicalUser \| AmazonCustomerByEmail \| Group``. |
 | ownerid| The ACL's owner ID as defined [here](https://docs.aws.amazon.com/AmazonS3/latest/API/API_control_S3ObjectOwner.html)|
 
-
 #### Relationships
-
 
 - S3 Access Control Lists apply to S3 buckets.
     ```
@@ -2304,7 +2237,6 @@ Representation of an AWS S3 [Bucket Policy Statements](https://docs.aws.amazon.c
     ```
     (:S3Bucket)-[:POLICY_STATEMENT]->(:S3PolicyStatement)
     ```
-
 
 ### KMSKey
 
@@ -2537,7 +2469,6 @@ Representation of an AWS [Auto Scaling Group Resource](https://docs.aws.amazon.c
 | capacityrebalance | Indicates whether Capacity Rebalancing is enabled. |
 | region | The region of the auto scaling group. |
 
-
 [Link to API Documentation](https://docs.aws.amazon.com/autoscaling/ec2/APIReference/API_AutoScalingGroup.html) of AWS Auto Scaling Groups
 
 #### Relationships
@@ -2593,7 +2524,6 @@ Representation of an AWS [EC2 Images (AMIs)](https://docs.aws.amazon.com/AWSEC2/
 | virtualizationtype | The type of virtualization of the AMI. |
 | bootmode | The boot mode of the image. |
 | region | The region of the image. |
-
 
 [Link to API Documentation](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_Image.html) of EC2 Images
 
@@ -3717,6 +3647,93 @@ Representation of an AWS [EC2 Route](https://docs.aws.amazon.com/AWSEC2/latest/A
 - EC2Route routes to an AWSInternetGateway. In most cases this tells AWS "to reach the internet, use this IGW".
     ```
     (EC2Route)-[ROUTES_TO_GATEWAY]->(AWSInternetGateway)
+    ```
+
+### EventRule
+
+Representation of an AWS [EventBridge/CloudWatch Event Rule](https://docs.aws.amazon.com/eventbridge/latest/APIReference/API_Rule.html).
+
+| Field | Description |
+|-------|-------------|
+| firstseen | Timestamp of when a sync job first discovered this node |
+| lastupdated | Timestamp of the last time the node was updated |
+| **id** | The ARN of the event rule |
+| arn | The ARN of the event rule |
+| name | The name of the event rule |
+| state | The state of the rule (ENABLED or DISABLED) |
+| description | The description of the rule |
+| event_pattern | The event pattern used to match events |
+| schedule_expression | The scheduling expression for the rule |
+| role_arn | The ARN of the IAM role associated with the rule |
+| event_bus_name | The name of the event bus (default if not specified) |
+| managed_by | The service that manages the rule |
+| created_by | The user or service that created the rule |
+| region | The AWS region where the rule exists |
+
+#### Relationships
+- EventRule is a resource under the AWS Account.
+    ```
+    (AWSAccount)-[RESOURCE]->(EventRule)
+    ```
+- EventRule may use an IAM role.
+    ```
+    (EventRule)-[USES_ROLE]->(AWSRole)
+    ```
+- EventRule can trigger Lambda functions.
+    ```
+    (EventRule)-[TRIGGERS]->(AWSLambda)
+    ```
+- EventRule can publish to SNS topics.
+    ```
+    (EventRule)-[PUBLISHES_TO]->(SNSTopic)
+    ```
+- EventRule can send messages to SQS queues.
+    ```
+    (EventRule)-[SENDS_TO]->(SQSQueue)
+    ```
+- EventRule can run tasks in ECS clusters.
+    ```
+    (EventRule)-[RUNS_TASK_IN]->(ECSCluster)
+    ```
+- EventRule can start Step Functions executions.
+    ```
+    (EventRule)-[STARTS_EXECUTION]->(StepFunction)
+    ```
+- EventRule can put records to Kinesis streams.
+    ```
+    (EventRule)-[PUTS_RECORDS_TO]->(KinesisStream)
+    ```
+- EventRule can trigger CodeBuild projects.
+    ```
+    (EventRule)-[TRIGGERS_BUILD]->(CodeBuildProject)
+    ```
+- EventRule can start CodePipeline executions.
+    ```
+    (EventRule)-[STARTS_PIPELINE]->(CodePipeline)
+    ```
+- EventRule can invoke API Gateway REST APIs.
+    ```
+    (EventRule)-[INVOKES_API]->(APIGatewayRestAPI)
+    ```
+- EventRule can log to CloudWatch Log Groups.
+    ```
+    (EventRule)-[LOGS_TO]->(CloudWatchLogGroup)
+    ```
+- EventRule can submit jobs to Batch job queues.
+    ```
+    (EventRule)-[SUBMITS_TO]->(BatchJobQueue)
+    ```
+- EventRule can start SageMaker pipelines.
+    ```
+    (EventRule)-[STARTS_PIPELINE]->(SageMakerPipeline)
+    ```
+- EventRule can deliver to Firehose delivery streams.
+    ```
+    (EventRule)-[DELIVERS_TO]->(FirehoseDeliveryStream)
+    ```
+- EventRule can execute queries on Redshift clusters.
+    ```
+    (EventRule)-[QUERIES]->(RedshiftCluster)
     ```
 
 ### SecretsManagerSecretVersion
