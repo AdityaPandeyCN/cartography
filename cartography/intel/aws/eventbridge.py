@@ -1,5 +1,8 @@
 import logging
 from typing import Any
+from typing import Callable
+from typing import Dict
+from typing import Tuple
 
 import boto3
 import neo4j
@@ -16,8 +19,27 @@ from cartography.util import timeit
 logger = logging.getLogger(__name__)
 stat_handler = get_stats_client(__name__)
 
+SUPPORTED_TARGET_TYPES: Dict[str, Callable[[str], bool]] = {
+    "lambda_function": lambda arn: ":lambda:" in arn and ":function:" in arn,
+    "sns_topic": lambda arn: ":sns:" in arn,
+    "sqs_queue": lambda arn: ":sqs:" in arn,
+    "ecs_cluster": lambda arn: ":ecs:" in arn and "cluster/" in arn,
+    "step_function": lambda arn: ":states:" in arn,
+    "kinesis_stream": lambda arn: ":kinesis:" in arn and ":stream/" in arn,
+    "codebuild_project": lambda arn: ":codebuild:" in arn and ":project/" in arn,
+    "codepipeline": lambda arn: ":codepipeline:" in arn,
+    "api_gateway": lambda arn: ":execute-api:" in arn,
+    "cloudwatch_log_group": lambda arn: ":logs:" in arn and ":log-group:" in arn,
+    "batch_job_queue": lambda arn: ":batch:" in arn and ":job-queue/" in arn,
+    "sagemaker_pipeline": lambda arn: ":sagemaker:" in arn and ":pipeline/" in arn,
+    "firehose_delivery_stream": lambda arn: ":firehose:" in arn
+    and ":deliverystream/" in arn,
+    "redshift_cluster": lambda arn: ":redshift:" in arn and ":cluster:" in arn,
+}
 
-DEFAULT_EVENT_BUS = "default"
+_FIELD_NAME_OVERRIDES: Dict[str, str] = {
+    "step_function": "step_functions",
+}
 
 
 @timeit
@@ -31,107 +53,118 @@ def get_event_rules(
         "events", region_name=region, config=get_botocore_config()
     )
 
-    paginator = client.get_paginator("list_rules")
     rules: list[dict[str, Any]] = []
     targets_by_rule: dict[str, list[dict[str, Any]]] = {}
 
+    paginator = client.get_paginator("list_rules")
     for page in paginator.paginate():
         rules.extend(page.get("Rules", []))
 
     for rule in rules:
-        target_paginator = client.get_paginator("list_targets_by_rule")
+        rule_name = rule["Name"]
         targets: list[dict[str, Any]] = []
-        for t_page in target_paginator.paginate(Rule=rule["Name"]):
-            targets.extend(t_page.get("Targets", []))
-        targets_by_rule[rule["Name"]] = targets
+
+        try:
+            target_paginator = client.get_paginator("list_targets_by_rule")
+            for page in target_paginator.paginate(Rule=rule_name):
+                targets.extend(page.get("Targets", []))
+        except client.exceptions.ResourceNotFoundException:
+
+            logger.warning(
+                f"Rule '{rule_name}' not found when fetching targets - skipping"
+            )
+            continue
+
+        if targets:
+            targets_by_rule[rule_name] = targets
 
     return {"Rules": rules, "Targets": targets_by_rule}
 
 
+def classify_target_arn(arn: str) -> Tuple[str, str]:
+    """Return (type, arn). Unknown types are labelled 'unknown'."""
+
+    for target_type, matcher in SUPPORTED_TARGET_TYPES.items():
+        if matcher(arn):
+            return target_type, arn
+
+    return "unknown", arn
+
+
+def classify_and_group_targets(targets: list[dict[str, Any]]) -> dict[str, list[str]]:
+    """
+    Classify targets and group them by type.
+    Returns only non-empty groups.
+    """
+    groups: dict[str, list[str]] = {}
+    unknown_targets: list[str] = []
+
+    for target in targets:
+        raw_arn = target.get("Arn", "").strip()
+        if not raw_arn:
+            continue
+
+        target_type, arn = classify_target_arn(raw_arn)
+
+        if target_type == "unknown":
+            unknown_targets.append(arn)
+            logger.debug("Unknown target type for ARN: %s", arn)
+            continue
+
+        list_name_root = _FIELD_NAME_OVERRIDES.get(target_type, target_type)
+        field_name = f"{list_name_root}_arns"
+        groups.setdefault(field_name, []).append(arn)
+
+    if unknown_targets:
+        groups["unknown_target_arns"] = unknown_targets
+
+    return groups
+
+
 def transform_event_rules(data: dict[str, Any], region: str) -> list[dict[str, Any]]:
-    """Shape the raw AWS API response so it lines up with EventRuleSchema."""
+    """
+    Transform raw AWS API response to match EventRuleSchema.
+    Only includes target lists that actually have values.
+    """
     transformed: list[dict[str, Any]] = []
 
     for rule in data["Rules"]:
-        rule_name: str = rule["Name"]
-        targets: list[dict[str, Any]] = data["Targets"].get(rule_name, [])
-
-        lambda_function_arns: list[str] = []
-        sns_topic_arns: list[str] = []
-        sqs_queue_arns: list[str] = []
-        ecs_cluster_arns: list[str] = []
-        step_functions_arns: list[str] = []
-        kinesis_stream_arns: list[str] = []
-        codebuild_project_arns: list[str] = []
-        codepipeline_arns: list[str] = []
-        api_gateway_arns: list[str] = []
-        cloudwatch_log_group_arns: list[str] = []
-        batch_job_queue_arns: list[str] = []
-        sagemaker_pipeline_arns: list[str] = []
-        firehose_delivery_stream_arns: list[str] = []
-        redshift_cluster_arns: list[str] = []
-
-        for target in targets:
-            target_arn: str = target.get("Arn", "")
-
-            if ":lambda:" in target_arn and ":function:" in target_arn:
-                lambda_function_arns.append(target_arn)
-            elif ":sns:" in target_arn:
-                sns_topic_arns.append(target_arn)
-            elif ":sqs:" in target_arn:
-                sqs_queue_arns.append(target_arn)
-            elif ":ecs:" in target_arn and "cluster/" in target_arn:
-                ecs_cluster_arns.append(target_arn)
-            elif ":states:" in target_arn:
-                step_functions_arns.append(target_arn)
-            elif ":kinesis:" in target_arn and ":stream/" in target_arn:
-                kinesis_stream_arns.append(target_arn)
-            elif ":codebuild:" in target_arn and ":project/" in target_arn:
-                codebuild_project_arns.append(target_arn)
-            elif ":codepipeline:" in target_arn:
-                codepipeline_arns.append(target_arn)
-            elif ":execute-api:" in target_arn:
-                api_gateway_arns.append(target_arn)
-            elif ":logs:" in target_arn and ":log-group:" in target_arn:
-                cloudwatch_log_group_arns.append(target_arn)
-            elif ":batch:" in target_arn and ":job-queue/" in target_arn:
-                batch_job_queue_arns.append(target_arn)
-            elif ":sagemaker:" in target_arn and ":pipeline/" in target_arn:
-                sagemaker_pipeline_arns.append(target_arn)
-            elif ":firehose:" in target_arn and ":deliverystream/" in target_arn:
-                firehose_delivery_stream_arns.append(target_arn)
-            elif ":redshift:" in target_arn and ":cluster:" in target_arn:
-                redshift_cluster_arns.append(target_arn)
-            else:
-                logger.debug(f"Unknown target type for ARN: {target_arn}")
+        rule_name = rule["Name"]
 
         item: dict[str, Any] = {
             "Arn": rule["Arn"],
-            "Name": rule["Name"],
+            "Name": rule_name,
             "State": rule.get("State"),
             "Description": rule.get("Description"),
             "EventPattern": rule.get("EventPattern"),
             "ScheduleExpression": rule.get("ScheduleExpression"),
             "RoleArn": rule.get("RoleArn"),
-            "EventBusName": rule.get("EventBusName", DEFAULT_EVENT_BUS),
+            "EventBusName": rule.get("EventBusName", "default"),
             "ManagedBy": rule.get("ManagedBy"),
             "CreatedBy": rule.get("CreatedBy"),
             "Region": region,
-            "lambda_function_arns": lambda_function_arns,
-            "sns_topic_arns": sns_topic_arns,
-            "sqs_queue_arns": sqs_queue_arns,
-            "ecs_cluster_arns": ecs_cluster_arns,
-            "step_functions_arns": step_functions_arns,
-            "kinesis_stream_arns": kinesis_stream_arns,
-            "codebuild_project_arns": codebuild_project_arns,
-            "codepipeline_arns": codepipeline_arns,
-            "api_gateway_arns": api_gateway_arns,
-            "cloudwatch_log_group_arns": cloudwatch_log_group_arns,
-            "batch_job_queue_arns": batch_job_queue_arns,
-            "sagemaker_pipeline_arns": sagemaker_pipeline_arns,
-            "firehose_delivery_stream_arns": firehose_delivery_stream_arns,
-            "redshift_cluster_arns": redshift_cluster_arns,
+            "lambda_function_arns": [],
         }
+
+        targets = data["Targets"].get(rule_name, [])
+        if targets:
+
+            target_groups = classify_and_group_targets(targets)
+
+            for field_name, arns in target_groups.items():
+                item[field_name] = arns
+
+            total_targets = len(targets)
+            classified_targets = sum(
+                len(arns)
+                for k, arns in target_groups.items()
+                if k != "unknown_target_arns"
+            )
+            if total_targets > classified_targets:
+                stat_handler.incr(
+                    "eventbridge.unknown_targets", total_targets - classified_targets
+                )
+
         transformed.append(item)
 
     return transformed
@@ -150,8 +183,13 @@ def load_event_rules(
         len(data),
         region,
     )
-    # Track statistics for monitoring
+
     stat_handler.incr("eventbridge.rules.loaded", len(data))
+
+    rules_with_targets = sum(
+        1 for rule in data if any(k.endswith("_arns") for k in rule.keys())
+    )
+    stat_handler.incr("eventbridge.rules_with_targets", rules_with_targets)
 
     load(
         neo4j_session,
@@ -167,6 +205,7 @@ def cleanup_event_rules(
     neo4j_session: neo4j.Session,
     common_job_parameters: dict[str, Any],
 ) -> None:
+    """Remove stale EventRule nodes."""
     logger.debug("Running CloudWatch Event rule cleanup job.")
     GraphJob.from_node_schema(EventRuleSchema(), common_job_parameters).run(
         neo4j_session
@@ -183,15 +222,17 @@ def sync(
     common_job_parameters: dict[str, Any],
 ) -> None:
     """Entry-point called by the AWS ingestion pipeline."""
-
     for region in regions:
         logger.info(
             "Syncing CloudWatch Event rules for region %s in account %s.",
             region,
             current_aws_account_id,
         )
+
         raw_rules = get_event_rules(boto3_session, region)
+
         transformed_rules = transform_event_rules(raw_rules, region)
+
         load_event_rules(
             neo4j_session,
             transformed_rules,

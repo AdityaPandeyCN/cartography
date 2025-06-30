@@ -78,6 +78,18 @@ MOCK_EVENT_RULES_RESPONSE = {
             "EventBusName": "custom-bus",
             "RoleArn": None,
         },
+        {
+            "Name": "unknown-target-test",
+            "Arn": "arn:aws:events:us-east-1:123456789012:rule/unknown-target-test",
+            "EventPattern": json.dumps(
+                {"source": ["test.service"], "detail-type": ["Test Event"]}
+            ),
+            "State": "ENABLED",
+            "Description": "Test rule with unknown target types",
+            "ScheduleExpression": None,
+            "EventBusName": "default",
+            "RoleArn": None,
+        },
     ],
     "Targets": {
         "hourly-batch-job": [
@@ -175,8 +187,25 @@ MOCK_EVENT_RULES_RESPONSE = {
                 },
             },
         ],
+        "unknown-target-test": [
+            {
+                "Id": "1",
+                "Arn": "arn:aws:some-future-service:us-east-1:123456789012:resource/unknown-type",
+                "RoleArn": None,
+                "Input": None,
+                "InputPath": None,
+                "InputTransformer": None,
+            },
+            {
+                "Id": "2",
+                "Arn": "arn:aws:custom-service:us-east-1:123456789012:widget/my-widget",
+                "RoleArn": None,
+                "Input": None,
+                "InputPath": None,
+                "InputTransformer": None,
+            },
+        ],
     },
 }
 
-# Empty response for testing edge-cases
 MOCK_EVENT_RULES_EMPTY_RESPONSE: dict[str, Any] = {"Rules": [], "Targets": {}}

@@ -1,3 +1,4 @@
+from cartography.intel.aws.eventbridge import classify_target_arn
 from cartography.intel.aws.eventbridge import transform_event_rules
 from tests.data.aws.eventbridge.event_rules import MOCK_EVENT_RULES_RESPONSE
 
@@ -8,7 +9,7 @@ def test_transform_event_rules():
 
     result = transform_event_rules(MOCK_EVENT_RULES_RESPONSE, region)
 
-    assert len(result) == 6
+    assert len(result) == 7
 
     # Validate schedule rule targets
     hourly_job = next(r for r in result if r["Name"] == "hourly-batch-job")
@@ -59,6 +60,13 @@ def test_transform_event_rules():
         "arn:aws:execute-api:us-east-1:123456789012:abcdef123/prod/POST/webhook"
     ]
 
+    # Unknown target rule
+    unknown_rule = next(r for r in result if r["Name"] == "unknown-target-test")
+    assert unknown_rule["unknown_target_arns"] == [
+        "arn:aws:some-future-service:us-east-1:123456789012:resource/unknown-type",
+        "arn:aws:custom-service:us-east-1:123456789012:widget/my-widget",
+    ]
+
 
 def test_transform_event_rules_handles_missing_fields():
     """Ensure missing optional fields are handled gracefully."""
@@ -79,3 +87,55 @@ def test_transform_event_rules_handles_missing_fields():
     assert rule["Name"] == "minimal-rule"
     assert rule["EventBusName"] == "default"
     assert rule["lambda_function_arns"] == []
+
+
+def test_classify_target_arn():
+    """Test the ARN classification function."""
+    # Test known target types
+    assert classify_target_arn("arn:aws:lambda:us-east-1:123:function:test") == (
+        "lambda_function",
+        "arn:aws:lambda:us-east-1:123:function:test",
+    )
+    assert classify_target_arn("arn:aws:sns:us-east-1:123:topic") == (
+        "sns_topic",
+        "arn:aws:sns:us-east-1:123:topic",
+    )
+    assert classify_target_arn("arn:aws:sqs:us-east-1:123:queue") == (
+        "sqs_queue",
+        "arn:aws:sqs:us-east-1:123:queue",
+    )
+    assert classify_target_arn("arn:aws:ecs:us-east-1:123:cluster/test") == (
+        "ecs_cluster",
+        "arn:aws:ecs:us-east-1:123:cluster/test",
+    )
+    assert classify_target_arn("arn:aws:states:us-east-1:123:stateMachine:test") == (
+        "step_function",
+        "arn:aws:states:us-east-1:123:stateMachine:test",
+    )
+    assert classify_target_arn("arn:aws:kinesis:us-east-1:123:stream/test") == (
+        "kinesis_stream",
+        "arn:aws:kinesis:us-east-1:123:stream/test",
+    )
+    assert classify_target_arn("arn:aws:codebuild:us-east-1:123:project/test") == (
+        "codebuild_project",
+        "arn:aws:codebuild:us-east-1:123:project/test",
+    )
+    assert classify_target_arn("arn:aws:codepipeline:us-east-1:123:test") == (
+        "codepipeline",
+        "arn:aws:codepipeline:us-east-1:123:test",
+    )
+    assert classify_target_arn("arn:aws:execute-api:us-east-1:123:test") == (
+        "api_gateway",
+        "arn:aws:execute-api:us-east-1:123:test",
+    )
+    assert classify_target_arn("arn:aws:logs:us-east-1:123:log-group:test") == (
+        "cloudwatch_log_group",
+        "arn:aws:logs:us-east-1:123:log-group:test",
+    )
+
+    # Test unknown target type
+    assert classify_target_arn("arn:aws:unknown-service:us-east-1:123:resource") == (
+        "unknown",
+        "arn:aws:unknown-service:us-east-1:123:resource",
+    )
+    assert classify_target_arn("invalid-arn") == ("unknown", "invalid-arn")

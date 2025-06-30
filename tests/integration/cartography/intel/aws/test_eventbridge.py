@@ -60,6 +60,11 @@ def test_sync_event_rules_nodes(mock_get_rules, neo4j_session):
             "api-gateway-trigger",
             "ENABLED",
         ),
+        (
+            "arn:aws:events:us-east-1:123456789012:rule/unknown-target-test",
+            "unknown-target-test",
+            "ENABLED",
+        ),
     }
     assert (
         check_nodes(neo4j_session, "EventRule", ["arn", "name", "state"])
@@ -117,6 +122,10 @@ def test_sync_event_rules_relationships_to_account(mock_get_rules, neo4j_session
         ),
         (
             "arn:aws:events:us-east-1:123456789012:rule/api-gateway-trigger",
+            TEST_ACCOUNT_ID,
+        ),
+        (
+            "arn:aws:events:us-east-1:123456789012:rule/unknown-target-test",
             TEST_ACCOUNT_ID,
         ),
     }
