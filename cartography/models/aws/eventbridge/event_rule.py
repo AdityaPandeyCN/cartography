@@ -10,13 +10,11 @@ from cartography.models.core.relationships import make_target_node_matcher
 from cartography.models.core.relationships import OtherRelationships
 from cartography.models.core.relationships import TargetNodeMatcher
 
-
 @dataclass(frozen=True)
 class EventRuleNodeProperties(CartographyNodeProperties):
     """Properties for CloudWatch Event Rule nodes"""
 
     id: PropertyRef = PropertyRef("Arn")
-
     arn: PropertyRef = PropertyRef("Arn", extra_index=True)
     lastupdated: PropertyRef = PropertyRef("lastupdated", set_in_kwargs=True)
 
@@ -30,19 +28,28 @@ class EventRuleNodeProperties(CartographyNodeProperties):
     managed_by: PropertyRef = PropertyRef("ManagedBy")
     created_by: PropertyRef = PropertyRef("CreatedBy")
 
-    codebuild_project_arns: PropertyRef = PropertyRef("codebuild_project_arns")
-    codepipeline_arns: PropertyRef = PropertyRef("codepipeline_arns")
-    api_gateway_arns: PropertyRef = PropertyRef("api_gateway_arns")
-
+    # Target ARN lists - ALL fields created in transform() must be defined here
+    lambda_functions_arns: PropertyRef = PropertyRef("lambda_functions_arns")
+    sns_topics_arns: PropertyRef = PropertyRef("sns_topics_arns")
+    sqs_queues_arns: PropertyRef = PropertyRef("sqs_queues_arns")
+    kinesis_streams_arns: PropertyRef = PropertyRef("kinesis_streams_arns")
+    ecs_clusters_arns: PropertyRef = PropertyRef("ecs_clusters_arns")
+    step_functions_arns: PropertyRef = PropertyRef("step_functions_arns")
+    cloudwatch_log_groups_arns: PropertyRef = PropertyRef("cloudwatch_log_groups_arns")
+    batch_job_queues_arns: PropertyRef = PropertyRef("batch_job_queues_arns")
+    sagemaker_pipelines_arns: PropertyRef = PropertyRef("sagemaker_pipelines_arns")
+    firehose_delivery_streams_arns: PropertyRef = PropertyRef("firehose_delivery_streams_arns")
+    redshift_clusters_arns: PropertyRef = PropertyRef("redshift_clusters_arns")
+    codebuild_projects_arns: PropertyRef = PropertyRef("codebuild_projects_arns")
+    codepipelines_arns: PropertyRef = PropertyRef("codepipelines_arns")
+    api_gateways_arns: PropertyRef = PropertyRef("api_gateways_arns")
     unknown_target_arns: PropertyRef = PropertyRef("unknown_target_arns")
 
     region: PropertyRef = PropertyRef("Region", set_in_kwargs=True)
 
-
 @dataclass(frozen=True)
 class _EventRuleRelProperties(CartographyRelProperties):
     lastupdated: PropertyRef = PropertyRef("lastupdated", set_in_kwargs=True)
-
 
 @dataclass(frozen=True)
 class EventRuleToAWSAccountRel(CartographyRelSchema):
@@ -56,11 +63,9 @@ class EventRuleToAWSAccountRel(CartographyRelSchema):
     rel_label: str = "RESOURCE"
     properties: _EventRuleRelProperties = _EventRuleRelProperties()
 
-
 @dataclass(frozen=True)
 class EventRuleToIAMRoleRel(CartographyRelSchema):
     """(:EventRule)-[:USES_ROLE]->(:AWSRole)
-
     Important for security analysis - shows which role the rule assumes
     when invoking targets.
     """
@@ -73,55 +78,144 @@ class EventRuleToIAMRoleRel(CartographyRelSchema):
     rel_label: str = "USES_ROLE"
     properties: _EventRuleRelProperties = _EventRuleRelProperties()
 
-
 @dataclass(frozen=True)
 class EventRuleToLambdaFunctionRel(CartographyRelSchema):
     """(:EventRule)-[:TRIGGERS]->(:AWSLambda)
-
     Most common EventBridge target - Lambda functions.
     Note: Lambda functions store their ARN in the 'id' field.
     """
 
     target_node_label: str = "AWSLambda"
     target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
-        {"id": PropertyRef("lambda_function_arns", one_to_many=True)},
+        {"id": PropertyRef("lambda_functions_arns", one_to_many=True)},
     )
     direction: LinkDirection = LinkDirection.OUTWARD
     rel_label: str = "TRIGGERS"
     properties: _EventRuleRelProperties = _EventRuleRelProperties()
 
-
 @dataclass(frozen=True)
 class EventRuleToSNSTopicRel(CartographyRelSchema):
     """(:EventRule)-[:PUBLISHES_TO]->(:SNSTopic)
-
     Second most common target - SNS topics for notifications.
     """
 
     target_node_label: str = "SNSTopic"
     target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
-        {"arn": PropertyRef("sns_topic_arns", one_to_many=True)},
+        {"arn": PropertyRef("sns_topics_arns", one_to_many=True)},
     )
     direction: LinkDirection = LinkDirection.OUTWARD
     rel_label: str = "PUBLISHES_TO"
     properties: _EventRuleRelProperties = _EventRuleRelProperties()
 
-
 @dataclass(frozen=True)
 class EventRuleToSQSQueueRel(CartographyRelSchema):
     """(:EventRule)-[:SENDS_TO]->(:SQSQueue)
-
     Third most common target - SQS queues for async processing.
     """
 
     target_node_label: str = "SQSQueue"
     target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
-        {"arn": PropertyRef("sqs_queue_arns", one_to_many=True)},
+        {"arn": PropertyRef("sqs_queues_arns", one_to_many=True)},
     )
     direction: LinkDirection = LinkDirection.OUTWARD
     rel_label: str = "SENDS_TO"
     properties: _EventRuleRelProperties = _EventRuleRelProperties()
 
+@dataclass(frozen=True)
+class EventRuleToKinesisStreamRel(CartographyRelSchema):
+    """(:EventRule)-[:SENDS_TO]->(:KinesisStream)"""
+
+    target_node_label: str = "KinesisStream"
+    target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
+        {"arn": PropertyRef("kinesis_streams_arns", one_to_many=True)},
+    )
+    direction: LinkDirection = LinkDirection.OUTWARD
+    rel_label: str = "SENDS_TO"
+    properties: _EventRuleRelProperties = _EventRuleRelProperties()
+
+@dataclass(frozen=True)
+class EventRuleToECSClusterRel(CartographyRelSchema):
+    """(:EventRule)-[:TARGETS]->(:ECSCluster)"""
+
+    target_node_label: str = "ECSCluster"
+    target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
+        {"arn": PropertyRef("ecs_clusters_arns", one_to_many=True)},
+    )
+    direction: LinkDirection = LinkDirection.OUTWARD
+    rel_label: str = "TARGETS"
+    properties: _EventRuleRelProperties = _EventRuleRelProperties()
+
+@dataclass(frozen=True)
+class EventRuleToStepFunctionRel(CartographyRelSchema):
+    """(:EventRule)-[:EXECUTES]->(:StepFunction)"""
+
+    target_node_label: str = "StepFunction"
+    target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
+        {"arn": PropertyRef("step_functions_arns", one_to_many=True)},
+    )
+    direction: LinkDirection = LinkDirection.OUTWARD
+    rel_label: str = "EXECUTES"
+    properties: _EventRuleRelProperties = _EventRuleRelProperties()
+
+@dataclass(frozen=True)
+class EventRuleToCloudWatchLogGroupRel(CartographyRelSchema):
+    """(:EventRule)-[:LOGS_TO]->(:CloudWatchLogGroup)"""
+
+    target_node_label: str = "CloudWatchLogGroup"
+    target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
+        {"arn": PropertyRef("cloudwatch_log_groups_arns", one_to_many=True)},
+    )
+    direction: LinkDirection = LinkDirection.OUTWARD
+    rel_label: str = "LOGS_TO"
+    properties: _EventRuleRelProperties = _EventRuleRelProperties()
+
+@dataclass(frozen=True)
+class EventRuleToBatchJobQueueRel(CartographyRelSchema):
+    """(:EventRule)-[:SUBMITS_TO]->(:BatchJobQueue)"""
+
+    target_node_label: str = "BatchJobQueue"
+    target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
+        {"arn": PropertyRef("batch_job_queues_arns", one_to_many=True)},
+    )
+    direction: LinkDirection = LinkDirection.OUTWARD
+    rel_label: str = "SUBMITS_TO"
+    properties: _EventRuleRelProperties = _EventRuleRelProperties()
+
+@dataclass(frozen=True)
+class EventRuleToSageMakerPipelineRel(CartographyRelSchema):
+    """(:EventRule)-[:STARTS_PIPELINE]->(:SageMakerPipeline)"""
+
+    target_node_label: str = "SageMakerPipeline"
+    target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
+        {"arn": PropertyRef("sagemaker_pipelines_arns", one_to_many=True)},
+    )
+    direction: LinkDirection = LinkDirection.OUTWARD
+    rel_label: str = "STARTS_PIPELINE"
+    properties: _EventRuleRelProperties = _EventRuleRelProperties()
+
+@dataclass(frozen=True)
+class EventRuleToFirehoseDeliveryStreamRel(CartographyRelSchema):
+    """(:EventRule)-[:DELIVERS_TO]->(:FirehoseDeliveryStream)"""
+
+    target_node_label: str = "FirehoseDeliveryStream"
+    target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
+        {"arn": PropertyRef("firehose_delivery_streams_arns", one_to_many=True)},
+    )
+    direction: LinkDirection = LinkDirection.OUTWARD
+    rel_label: str = "DELIVERS_TO"
+    properties: _EventRuleRelProperties = _EventRuleRelProperties()
+
+@dataclass(frozen=True)
+class EventRuleToRedshiftClusterRel(CartographyRelSchema):
+    """(:EventRule)-[:TARGETS]->(:RedshiftCluster)"""
+
+    target_node_label: str = "RedshiftCluster"
+    target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
+        {"arn": PropertyRef("redshift_clusters_arns", one_to_many=True)},
+    )
+    direction: LinkDirection = LinkDirection.OUTWARD
+    rel_label: str = "TARGETS"
+    properties: _EventRuleRelProperties = _EventRuleRelProperties()
 
 @dataclass(frozen=True)
 class EventRuleToCodeBuildProjectRel(CartographyRelSchema):
@@ -129,12 +223,11 @@ class EventRuleToCodeBuildProjectRel(CartographyRelSchema):
 
     target_node_label: str = "CodeBuildProject"
     target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
-        {"arn": PropertyRef("codebuild_project_arns", one_to_many=True)},
+        {"arn": PropertyRef("codebuild_projects_arns", one_to_many=True)},
     )
     direction: LinkDirection = LinkDirection.OUTWARD
     rel_label: str = "TRIGGERS_BUILD"
     properties: _EventRuleRelProperties = _EventRuleRelProperties()
-
 
 @dataclass(frozen=True)
 class EventRuleToCodePipelineRel(CartographyRelSchema):
@@ -142,12 +235,11 @@ class EventRuleToCodePipelineRel(CartographyRelSchema):
 
     target_node_label: str = "CodePipeline"
     target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
-        {"arn": PropertyRef("codepipeline_arns", one_to_many=True)},
+        {"arn": PropertyRef("codepipelines_arns", one_to_many=True)},
     )
     direction: LinkDirection = LinkDirection.OUTWARD
     rel_label: str = "STARTS_PIPELINE"
     properties: _EventRuleRelProperties = _EventRuleRelProperties()
-
 
 @dataclass(frozen=True)
 class EventRuleToAPIGatewayRel(CartographyRelSchema):
@@ -155,20 +247,19 @@ class EventRuleToAPIGatewayRel(CartographyRelSchema):
 
     target_node_label: str = "APIGatewayRestAPI"
     target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
-        {"id": PropertyRef("api_gateway_arns", one_to_many=True)},
+        {"id": PropertyRef("api_gateways_arns", one_to_many=True)},
     )
     direction: LinkDirection = LinkDirection.OUTWARD
     rel_label: str = "INVOKES_API"
     properties: _EventRuleRelProperties = _EventRuleRelProperties()
 
-
 @dataclass(frozen=True)
 class EventRuleSchema(CartographyNodeSchema):
     """Schema for CloudWatch Event Rules.
-
-    This schema focuses on the most common use cases (Lambda, SNS, SQS)
-    which cover ~80% of real-world EventBridge usage. Other target types
-    are captured in the unknown_target_arns property for future analysis.
+    
+    This schema includes relationships for all supported EventBridge target types.
+    The sub_resource_relationship correctly points to AWSAccount (tenant-like object)
+    as per Cartography best practices.
     """
 
     label: str = "EventRule"
@@ -180,8 +271,17 @@ class EventRuleSchema(CartographyNodeSchema):
             EventRuleToLambdaFunctionRel(),
             EventRuleToSNSTopicRel(),
             EventRuleToSQSQueueRel(),
+            EventRuleToKinesisStreamRel(),
+            EventRuleToECSClusterRel(),
+            EventRuleToStepFunctionRel(),
+            EventRuleToCloudWatchLogGroupRel(),
+            EventRuleToBatchJobQueueRel(),
+            EventRuleToSageMakerPipelineRel(),
+            EventRuleToFirehoseDeliveryStreamRel(),
+            EventRuleToRedshiftClusterRel(),
             EventRuleToCodeBuildProjectRel(),
             EventRuleToCodePipelineRel(),
             EventRuleToAPIGatewayRel(),
         ]
     )
+
